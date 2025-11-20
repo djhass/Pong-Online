@@ -10,6 +10,7 @@ import pygame
 import tkinter as tk
 import sys
 import socket
+import struct
 
 from assets.code.helperCode import *
 
@@ -145,7 +146,8 @@ def playGame(screenWidth:int, screenHeight:int, playerPaddle:str, client:socket.
         pygame.draw.rect(screen, WHITE, topWall)
         pygame.draw.rect(screen, WHITE, bottomWall)
         scoreRect = updateScore(lScore, rScore, screen, WHITE, scoreFont)
-        pygame.display.update([topWall, bottomWall, ball, leftPaddle, rightPaddle, scoreRect, winMessage])
+        #pygame.display.update([topWall, bottomWall, ball, leftPaddle, rightPaddle, scoreRect, winMessage])
+        pygame.display.flip()
         clock.tick(60)
         
         # This number should be synchronized between you and your opponent.  If your number is larger
@@ -175,23 +177,22 @@ def joinServer(ip:str, port:str, errorLabel:tk.Label, app:tk.Tk) -> None:
     
     # Create a socket and connect to the server
     # You don't have to use SOCK_STREAM, use what you think is best
-    client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    client.connect((ip, int(port)))
-    client.sendall(b"Hello Server!")  # Example of sending data to the server
-
+    server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    server.connect((ip, int(port)))
 
     # Get the required information from your server (screen width, height & player paddle, "left or "right)
-
+    screen_width, screen_height, leftNRight = struct.unpack('iii', server.recv(12))
+    left_right = "left" if leftNRight else "right"
 
     # If you have messages you'd like to show the user use the errorLabel widget like so
-    errorLabel.config(text=f"Some update text. You input: IP: {ip}, Port: {port}")
+    #errorLabel.config(data)
     # You may or may not need to call this, depending on how many times you update the label
-    errorLabel.update()     
+    #errorLabel.update()     
 
     # Close this window and start the game with the info passed to you from the server
-    # app.withdraw()     # Hides the window (we'll kill it later)
-    #playGame(screenWidth, screenHeight, ("left"|"right"), client)  # User will be either left or right paddle
-    #app.quit()         # Kills the window
+    app.withdraw()     # Hides the window (we'll kill it later)
+    playGame(screen_width, screen_height, left_right, server)  # User will be either left or right paddle
+    app.quit()         # Kills the window
 
 
 # This displays the opening screen, you don't need to edit this (but may if you like)

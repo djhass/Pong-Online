@@ -9,6 +9,7 @@
 import socket
 import threading
 from socket import AF_INET, SOCK_STREAM
+import struct
 
 # Use this file to write your server logic
 # You will need to support at least two clients
@@ -16,6 +17,13 @@ from socket import AF_INET, SOCK_STREAM
 # for each player and where the ball is, and relay that to each client
 # I suggest you use the sync variable in pongClient.py to determine how out of sync your two
 # clients are and take actions to resync the games
+
+#CONSTANTS
+HOST = 'localhost'
+PORT = 12345
+SCREEN_WIDTH = 640
+SCREEN_HEIGHT = 480
+
 
 # Thread function to handle client messages
 shutdown_event = threading.Event() #for shutting down the thread
@@ -29,14 +37,13 @@ def readMessage(connection):
 
 print("Starting Pong Server...")
 
-HOST = 'localhost'
-PORT = 12345
-
+#create socket to listen on
 serverSocket = socket.socket(AF_INET, SOCK_STREAM)
 serverSocket.bind((HOST, PORT))
 serverSocket.settimeout(0.5) #allow interrupts between socket timeouts for keyboard readings
 serverSocket.listen(2)
 
+#lists to keep track of threads and client sockets
 threads = []
 client_sockets = []
 
@@ -48,11 +55,19 @@ try:
         try:
             # use socket sock to communicate
             # with client process
-            newConnection, addr = serverSocket.accept()
+            newConnection, addr = serverSocket.accept() #wait for connection
+
+            #start new thread to listen to client messages
             client_sockets.append(newConnection)
-            t = threading.Thread(target=readMessage, args=(newConnection,))
-            t.start()
-            threads.append(t)
+            newThread = threading.Thread(target=readMessage, args=(newConnection,))
+            newThread.start()
+            threads.append(newThread) #keep track of threads for shutdown
+
+            #send initial info: screen width, screen height, player paddle, left or right
+            leftNRight = (len(client_sockets) % 2) #left if number of clients is even, right if not
+            data = struct.pack('iii', SCREEN_WIDTH, SCREEN_HEIGHT, leftNRight) #pack data into bytes
+            newConnection.sendall(data) #send data to client
+
             print(f"New Connection from {addr}")
         except socket.timeout: #allow interrupts between socket timeouts for keyboard readings
             continue
