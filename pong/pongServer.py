@@ -1,9 +1,9 @@
 # =================================================================================================
-# Contributing Authors:	    <Anyone who touched the code>
-# Email Addresses:          <Your uky.edu email addresses>
-# Date:                     <The date the file was last edited>
-# Purpose:                  <How this file contributes to the project>
-# Misc:                     <Not Required.  Anything else you might want to include>
+# Contributing Authors:	    Daniel Hasselwander, 
+# Email Addresses:          djha269@uky.edu, 
+# Date:                     11/21/25
+# Purpose:                  The pong server host, handles client connections and relays game state
+# Misc:                     
 # =================================================================================================
 
 import socket
@@ -27,7 +27,10 @@ SCREEN_HEIGHT = 480
 
 # Thread function to handle client messages
 shutdown_event = threading.Event() #for shutting down the thread
-def readMessage(connection):
+def readMessage(connection:socket.socket) -> None:
+    # Purpose:      This function is runs as a thread to read messages from a client
+    # Arguments:
+    # connection    The socket to read messages from
     while not shutdown_event.is_set(): #only exit loop when event fires
         message = connection.recv(1024).decode()
         if not message:

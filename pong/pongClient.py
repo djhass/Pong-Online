@@ -1,9 +1,9 @@
 # =================================================================================================
-# Contributing Authors:	    <Anyone who touched the code>
-# Email Addresses:          <Your uky.edu email addresses>
-# Date:                     <The date the file was last edited>
-# Purpose:                  <How this file contributes to the project>
-# Misc:                     <Not Required.  Anything else you might want to include>
+# Contributing Authors:	    Daniel Hasselwander,
+# Email Addresses:          djha269@uky.edu,
+# Date:                     11/21/25
+# Purpose:                  The pong client, connects to the server and runs the game loop
+# Misc:                     
 # =================================================================================================
 
 import pygame
@@ -18,6 +18,12 @@ from assets.code.helperCode import *
 # where you should add to the code are marked.  Feel free to change any part of this project
 # to suit your needs.
 def playGame(screenWidth:int, screenHeight:int, playerPaddle:str, client:socket.socket) -> None:
+    # Purpose:      This is the main game loop
+    # Arguments:
+    # screenWidth            A number holding the width of the screen
+    # screenHeight          A number holding the height of the screen
+    # playerPaddle    A string indicating which paddle the player controls ("left" or "right")
+    # client           The socket object connected to the server
     
     # Pygame inits
     pygame.mixer.pre_init(44100, -16, 2, 2048)
@@ -147,7 +153,7 @@ def playGame(screenWidth:int, screenHeight:int, playerPaddle:str, client:socket.
         pygame.draw.rect(screen, WHITE, bottomWall)
         scoreRect = updateScore(lScore, rScore, screen, WHITE, scoreFont)
         #pygame.display.update([topWall, bottomWall, ball, leftPaddle, rightPaddle, scoreRect, winMessage])
-        pygame.display.flip()
+        pygame.display.flip() #refreshing the entire page fixed smearing issues
         clock.tick(60)
         
         # This number should be synchronized between you and your opponent.  If your number is larger

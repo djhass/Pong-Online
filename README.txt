@@ -3,13 +3,12 @@ Contact Info
 
 Group Members & Email Addresses:
 
-    Person 1, person1@uky.edu
-    Person 2, person2@uky.edu
+    Daniel Hasselwander, djha269@uky.edu
 
 Versioning
 ==========
 
-Github Link: 
+Github Link: github.com/djhass/Pong-Online
 
 General Info
 ============
@@ -24,6 +23,6 @@ Run the following line to install the required libraries for this project:
 
 Known Bugs
 ==========
-- The server doesn't work because the logic isn't yet written.
-- The client doesn't speak to the server
+- The client doesn't relay game information to the server
+- Client tracking in the server breaks when a connection is lost
 
