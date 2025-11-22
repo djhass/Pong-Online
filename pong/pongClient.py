@@ -1,6 +1,6 @@
 # =================================================================================================
-# Contributing Authors:	    Daniel Hasselwander,
-# Email Addresses:          djha269@uky.edu,
+# Contributing Authors:	    Daniel Hasselwander, Donnie Tkachenko
+# Email Addresses:          djha269@uky.edu, dmtk222@uky.edu
 # Date:                     11/21/25
 # Purpose:                  The pong client, connects to the server and runs the game loop
 # Misc:                     
@@ -11,20 +11,57 @@ import tkinter as tk
 import sys
 import socket
 import struct
+import threading
+from typing import Dict, Any
 
 from assets.code.helperCode import *
+
+def receive_updates(server_socket: socket.socket, opponentPaddleObj: Paddle, ballObj: Ball, shared_state: Dict[str, int]) -> None:
+    # Author: Donnie Tkachenko
+    # Purpose: Thread to listen for game state. Uses SYNC variable to reconcile state (Catch-up logic).
+    # Pre: Connected socket, game objects, and shared state dict with 'sync' key.
+    # Post: Updates opponent paddle. Updates Ball/Score ONLY if remote sync > local sync.
+
+    # Packet: [OpponentY, BallX, BallY, ScoreL, ScoreR, Sync] = 6 ints = 24 bytes
+    packet_size = struct.calcsize('!iiiiii')
+    
+    while True:
+        try:
+            data = server_socket.recv(packet_size)
+            if not data:
+                break
+            
+            # Unpack data
+            unpacked = struct.unpack('!iiiiii', data)
+            op_y, ball_x, ball_y, score_l, score_r, remote_sync = unpacked
+
+            # 1. Always update Opponent Paddle (This is always authoritative for that player)
+            opponentPaddleObj.rect.y = op_y
+            
+            # 2. Sync Logic: If the opponent is "ahead" of us in time (larger sync), 
+            # we accept their reality for the Ball and Score to catch up.
+            local_sync = shared_state.get('sync', 0)
+            
+            if remote_sync > local_sync:
+                shared_state['ball_x'] = ball_x
+                shared_state['ball_y'] = ball_y
+                shared_state['lScore'] = score_l
+                shared_state['rScore'] = score_r
+                # We update a flag to tell the main loop to apply these changes
+                shared_state['should_update'] = 1
+                
+        except Exception:
+            break
 
 # This is the main game loop.  For the most part, you will not need to modify this.  The sections
 # where you should add to the code are marked.  Feel free to change any part of this project
 # to suit your needs.
-def playGame(screenWidth:int, screenHeight:int, playerPaddle:str, client:socket.socket) -> None:
-    # Purpose:      This is the main game loop
-    # Arguments:
-    # screenWidth            A number holding the width of the screen
-    # screenHeight          A number holding the height of the screen
-    # playerPaddle    A string indicating which paddle the player controls ("left" or "right")
-    # client           The socket object connected to the server
-    
+def playGame(screenWidth: int, screenHeight: int, playerPaddle: str, client: socket.socket) -> None:
+    # Author: Daniel Hasselwander, Donnie Tkachenko
+    # Purpose: The main game loop. Runs physics symmetrically and reconciles via Sync.
+    # Pre: Pygame init, valid screen dims, player side string, and connected socket.
+    # Post: Runs game loop until exit.
+
     # Pygame inits
     pygame.mixer.pre_init(44100, -16, 2, 2048)
     pygame.init()
@@ -62,6 +99,21 @@ def playGame(screenWidth:int, screenHeight:int, playerPaddle:str, client:socket.
         opponentPaddleObj = leftPaddle
         playerPaddleObj = rightPaddle
 
+    # Shared container for the thread. We init 'should_update' to 0 (False)
+    shared_state = {
+        'ball_x': ball.rect.x,
+        'ball_y': ball.rect.y,
+        'lScore': 0,
+        'rScore': 0,
+        'sync': 0,
+        'should_update': 0
+    }
+
+    # Networking Thread
+    t = threading.Thread(target=receive_updates, args=(client, opponentPaddleObj, ball, shared_state))
+    t.daemon = True
+    t.start()
+
     lScore = 0
     rScore = 0
 
@@ -70,6 +122,17 @@ def playGame(screenWidth:int, screenHeight:int, playerPaddle:str, client:socket.
     while True:
         # Wiping the screen
         screen.fill((0,0,0))
+        
+        # Update shared sync so thread knows time
+        shared_state['sync'] = sync
+
+        # If the thread flagged an update (because remote sync > local sync), we apply it.
+        if shared_state['should_update'] == 1:
+            ball.rect.x = shared_state['ball_x']
+            ball.rect.y = shared_state['ball_y']
+            lScore = shared_state['lScore']
+            rScore = shared_state['rScore']
+            shared_state['should_update'] = 0 # Reset flag
 
         # Getting keypress events
         for event in pygame.event.get():
@@ -77,10 +140,10 @@ def playGame(screenWidth:int, screenHeight:int, playerPaddle:str, client:socket.
                 pygame.quit()
                 sys.exit()
             elif event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_DOWN:
+                if event.key == pygame.K_DOWN or event.key == pygame.K_s:
                     playerPaddleObj.moving = "down"
 
-                elif event.key == pygame.K_UP:
+                elif event.key == pygame.K_UP or event.key == pygame.K_w:
                     playerPaddleObj.moving = "up"
 
             elif event.type == pygame.KEYUP:
@@ -89,8 +152,21 @@ def playGame(screenWidth:int, screenHeight:int, playerPaddle:str, client:socket.
         # =========================================================================================
         # Your code here to send an update to the server on your paddle's information,
         # where the ball is and the current score.
-        # Feel free to change when the score is updated to suit your needs/requirements
         
+        try:
+            # We send [MyPaddle, MyBallX, MyBallY, MyLScore, MyRScore, MySync]
+            # We send OUR version of reality. The opponent will only accept it if our sync > theirs.
+            packet = struct.pack('!iiiiii', 
+                                 playerPaddleObj.rect.y, 
+                                 ball.rect.x, 
+                                 ball.rect.y, 
+                                 lScore, 
+                                 rScore,
+                                 sync)
+            
+            client.sendall(packet)
+        except:
+            pass
         
         # =========================================================================================
 
@@ -152,8 +228,8 @@ def playGame(screenWidth:int, screenHeight:int, playerPaddle:str, client:socket.
         pygame.draw.rect(screen, WHITE, topWall)
         pygame.draw.rect(screen, WHITE, bottomWall)
         scoreRect = updateScore(lScore, rScore, screen, WHITE, scoreFont)
-        #pygame.display.update([topWall, bottomWall, ball, leftPaddle, rightPaddle, scoreRect, winMessage])
-        pygame.display.flip() #refreshing the entire page fixed smearing issues
+        
+        pygame.display.flip() 
         clock.tick(60)
         
         # This number should be synchronized between you and your opponent.  If your number is larger
@@ -174,7 +250,11 @@ def playGame(screenWidth:int, screenHeight:int, playerPaddle:str, client:socket.
 # If you want to hard code the screen's dimensions into the code, that's fine, but you will need to know
 # which client is which
 def joinServer(ip:str, port:str, errorLabel:tk.Label, app:tk.Tk) -> None:
-    # Purpose:      This method is fired when the join button is clicked
+    # Author:       Daniel Hasselwander, Donnie Tkachenko
+    # Purpose:      This method is fired when the join button is clicked. Connects and handshakes.
+    # Pre:          IP and Port are valid strings.
+    # Post:         Establishes connection, determines side, and starts game loop.
+
     # Arguments:
     # ip            A string holding the IP address of the server
     # port          A string holding the port the server is using
@@ -182,23 +262,26 @@ def joinServer(ip:str, port:str, errorLabel:tk.Label, app:tk.Tk) -> None:
     # app           The tk window object, needed to kill the window
     
     # Create a socket and connect to the server
-    # You don't have to use SOCK_STREAM, use what you think is best
-    server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    server.connect((ip, int(port)))
+    try:
+        client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        client.connect((ip, int(port)))
 
-    # Get the required information from your server (screen width, height & player paddle, "left or "right)
-    screen_width, screen_height, leftNRight = struct.unpack('iii', server.recv(12))
-    left_right = "left" if leftNRight else "right"
+        # Get the required information from your server (screen width, height & player paddle)
+        # Handshake: Receive 3 integers [Width, Height, Side]
+        data = client.recv(12)
+        screen_width, screen_height, leftNRight = struct.unpack('iii', data)
+        
+        # Map integer to string: 1 -> "left", 0 -> "right"
+        player_side = "left" if leftNRight else "right"
 
-    # If you have messages you'd like to show the user use the errorLabel widget like so
-    #errorLabel.config(data)
-    # You may or may not need to call this, depending on how many times you update the label
-    #errorLabel.update()     
+        # Close this window and start the game with the info passed to you from the server
+        app.withdraw()     # Hides the window (we'll kill it later)
+        playGame(screen_width, screen_height, player_side, client)  # User will be either left or right paddle
+        app.quit()         # Kills the window
 
-    # Close this window and start the game with the info passed to you from the server
-    app.withdraw()     # Hides the window (we'll kill it later)
-    playGame(screen_width, screen_height, left_right, server)  # User will be either left or right paddle
-    app.quit()         # Kills the window
+    except Exception as e:
+        errorLabel.config(text=f"Error: {e}")
+        errorLabel.update()
 
 
 # This displays the opening screen, you don't need to edit this (but may if you like)
@@ -216,12 +299,14 @@ def startScreen():
 
     ipEntry = tk.Entry(app)
     ipEntry.grid(column=1, row=1)
+    ipEntry.insert(0, "localhost") # Default for easier testing
 
     portLabel = tk.Label(text="Server Port:")
     portLabel.grid(column=0, row=2, sticky="W", padx=8)
 
     portEntry = tk.Entry(app)
     portEntry.grid(column=1, row=2)
+    portEntry.insert(0, "12345") # Default for easier testing
 
     errorLabel = tk.Label(text="")
     errorLabel.grid(column=0, row=4, columnspan=2)
@@ -233,8 +318,3 @@ def startScreen():
 
 if __name__ == "__main__":
     startScreen()
-    
-    # Uncomment the line below if you want to play the game without a server to see how it should work
-    # the startScreen() function should call playGame with the arguments given to it by the server this is
-    # here for demo purposes only
-    #playGame(640, 480,"left",socket.socket(socket.AF_INET, socket.SOCK_STREAM))
