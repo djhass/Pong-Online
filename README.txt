@@ -4,6 +4,8 @@ Contact Info
 Group Members & Email Addresses:
 
     Daniel Hasselwander, djha269@uky.edu
+    Donnie Tkachenko, dmtk222@uky.edu
+    Jackson Russell, jgru225@uky.edu
 
 Versioning
 ==========
