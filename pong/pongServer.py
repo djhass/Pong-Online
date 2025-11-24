@@ -66,7 +66,11 @@ if __name__ == "__main__":
     serverSocket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     
     serverSocket.bind((HOST, PORT))
-    serverSocket.listen(2)
+    # Author: Jackson Russell
+    # Purpose: Removes the cap of 2 clients, fulfilling the second bonus.
+    # Pre: serverSocket.listen(2) (Only 2 clients)
+    # Post: serverSocket.listen() (Unlimited clients)
+    serverSocket.listen()
 
     print(f"Server listening on {HOST}:{PORT}")
 
