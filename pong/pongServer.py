@@ -87,7 +87,11 @@ if __name__ == "__main__":
 
             # Logic: First connection (len 1) is Left, Second (len 2) is Right
             # We determine side based on connection order
-            data = struct.pack('iii', SCREEN_WIDTH, SCREEN_HEIGHT, 1 if len(client_sockets) == 1 else 0)
+            # Author: Jackson Russell
+            # Purpose: Adds extra positions now that there is unlimited number of clients.
+            # Pre: data = struct.pack('iii', SCREEN_WIDTH, SCREEN_HEIGHT, 1 if len(client_sockets) == 1 else 0) (Only 2 positions for 2 clients)
+            # Post: data = struct.pack('iii', SCREEN_WIDTH, SCREEN_HEIGHT, -1) (No limits on postions for the new unlimited number of clients)
+            data = struct.pack('iii', SCREEN_WIDTH, SCREEN_HEIGHT, -1)
             newConnection.sendall(data)
 
             print(f"New Connection from {addr}")
