@@ -266,6 +266,10 @@ def joinServer(ip:str, port:str, errorLabel:tk.Label, app:tk.Tk) -> None:
         client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         client.connect((ip, int(port)))
 
+        #wait to receive the initial handshake from the server
+        errorLabel.config(text=f"Waiting for Player 2...")
+        errorLabel.update()
+
         # Get the required information from your server (screen width, height & player paddle)
         # Handshake: Receive 3 integers [Width, Height, Side]
         data = client.recv(12)

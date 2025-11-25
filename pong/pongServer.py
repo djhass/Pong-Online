@@ -91,8 +91,13 @@ if __name__ == "__main__":
             # Purpose: Adds extra positions now that there is unlimited number of clients.
             # Pre: data = struct.pack('iii', SCREEN_WIDTH, SCREEN_HEIGHT, 1 if len(client_sockets) == 1 else 0) (Only 2 positions for 2 clients)
             # Post: data = struct.pack('iii', SCREEN_WIDTH, SCREEN_HEIGHT, -1) (No limits on postions for the new unlimited number of clients)
-            data = struct.pack('iii', SCREEN_WIDTH, SCREEN_HEIGHT, -1)
-            newConnection.sendall(data)
+            data = struct.pack('iii', SCREEN_WIDTH, SCREEN_HEIGHT, len(client_sockets) % 2 == 1)
+            if (len(client_sockets) > 2): #if more than two connections, send game info for current running game
+                client_sockets[len(client_sockets)-1].sendall(data)
+            elif (len(client_sockets) == 2): #if second connection, start game
+                client_sockets[0].sendall(struct.pack('iii', SCREEN_WIDTH, SCREEN_HEIGHT, 0))
+                client_sockets[1].sendall(struct.pack('iii', SCREEN_WIDTH, SCREEN_HEIGHT, 1))
+            
 
             print(f"New Connection from {addr}")
 
