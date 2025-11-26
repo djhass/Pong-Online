@@ -66,10 +66,6 @@ if __name__ == "__main__":
     serverSocket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     
     serverSocket.bind((HOST, PORT))
-    # Author: Jackson Russell
-    # Purpose: Removes the cap of 2 clients, fulfilling the second bonus.
-    # Pre: serverSocket.listen(2) (Only 2 clients)
-    # Post: serverSocket.listen() (Unlimited clients) ~ Reverted back to the Pre
     serverSocket.listen(2)
 
     print(f"Server listening on {HOST}:{PORT}")
@@ -85,20 +81,17 @@ if __name__ == "__main__":
             newThread.daemon = True
             newThread.start()
 
-            # Logic: First connection (len 1) is Left, Second (len 2) is Right
+            # Logic: If two clients, assign first connection (1) to left, Second (0) to right
             # We determine side based on connection order
-            # Author: Jackson Russell
-            # Purpose: Adds extra positions now that there is unlimited number of clients.
-            # Pre: data = struct.pack('iii', SCREEN_WIDTH, SCREEN_HEIGHT, 1 if len(client_sockets) == 1 else 0) (Only 2 positions for 2 clients)
+            # Author: Daniel Hasselwander
+            # Purpose: Starts the game with proper initialization data for each client
+            # Pre: data = struct.pack('iii', SCREEN_WIDTH, SCREEN_HEIGHT, 1 if len(client_sockets) == 1 else 0) (didn't wait for two clients)
             # Post: (No limits on postions for the new unlimited number of clients) ~ Reverted back to Pre
-            data = struct.pack('iii', SCREEN_WIDTH, SCREEN_HEIGHT, 1 if len(client_sockets) == 1 else 0)
-            if (len(client_sockets) > 2): #if more than two connections, send game info for current running game
-                client_sockets[len(client_sockets)-1].sendall(data)
-            elif (len(client_sockets) == 2): #if second connection, start game
-                client_sockets[0].sendall(struct.pack('iii', SCREEN_WIDTH, SCREEN_HEIGHT, 0))
-                client_sockets[1].sendall(struct.pack('iii', SCREEN_WIDTH, SCREEN_HEIGHT, 1))
             
-
+            if (len(client_sockets) > 1): #if more than two connections, send game info for current running game
+                client_sockets[0].sendall(struct.pack('iii', SCREEN_WIDTH, SCREEN_HEIGHT, 1))
+                client_sockets[1].sendall(struct.pack('iii', SCREEN_WIDTH, SCREEN_HEIGHT, 0))
+            
             print(f"New Connection from {addr}")
 
     except KeyboardInterrupt:
