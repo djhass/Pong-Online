@@ -23,8 +23,10 @@ Run the following line to install the required libraries for this project:
 
 `pip3 install -r requirements.txt`
 
+Run the python file "PongClient.py" in the "pong" folder to run a client session
+Run the python file "PongServer.py" in the "pong" folder to run the server
+
 Known Bugs
 ==========
-- The client doesn't relay game information to the server
-- Client tracking in the server breaks when a connection is lost
+
 
