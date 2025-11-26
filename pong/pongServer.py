@@ -19,7 +19,7 @@ import struct
 # clients are and take actions to resync the games
 
 #CONSTANTS
-HOST = 'localhost'
+HOST = socket.gethostname()
 PORT = 12345
 SCREEN_WIDTH = 640
 SCREEN_HEIGHT = 480

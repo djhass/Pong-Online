@@ -19,12 +19,17 @@ This file describes how to install/run your program and anything else you think 
 Install Instructions
 ====================
 
-Run the following line to install the required libraries for this project:
+Run the following line in the top directory to install the required libraries for this project:
 
 `pip3 install -r requirements.txt`
 
-Run the python file "PongClient.py" in the "pong" folder to run a client session
-Run the python file "PongServer.py" in the "pong" folder to run the server
+Run the following line in the `pong` directory to run a client session (play the game):
+
+`python pong\pongClient.py`
+
+Run the following line in the `pong` directory to host the server:
+
+`python pong\pongServer.py`
 
 Known Bugs
 ==========
